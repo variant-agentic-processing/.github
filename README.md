@@ -1,4 +1,4 @@
-# Genomic Variant Platform
+# Genomic Variant Platform (WIP This is a plan and not a reality)
 
 A cloud-native genomic variant analysis platform with an agentic natural language query interface. Built on GCP, ClickHouse, and the Model Context Protocol (MCP).
 
