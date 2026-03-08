@@ -114,3 +114,9 @@ Python . FastAPI . Next.js . ClickHouse . Anthropic Claude . Model Context Proto
 ## Getting Started
 
 Step-by-step deployment instructions across all repos: [INSTALL.md](../INSTALL.md)
+
+---
+
+## License
+
+[CC BY-NC 4.0](../LICENSE) — © 2025 Ryan Ratcliff. Free for non-commercial use with attribution. Commercial use requires prior written consent.
