@@ -1,5 +1,7 @@
 # Installation
 
+> **Work in progress.** These instructions cover the repos that are currently implemented. Additional services (MCP server, pipeline API, agent, web UI) are not yet deployed.
+
 Deploy in order: **infra → variant-pipeline → clinvar-pipeline**. Each repo depends on the one before it.
 
 ---
