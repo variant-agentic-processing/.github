@@ -338,7 +338,7 @@ The response is an SSE stream. Events: `tool_call`, `tool_result`, `answer`, `er
 
 ## 7. vap-ui
 
-Browser-based internal tool — pipeline management, agent query, and cohort dashboard. Proxies requests to workflow-service, agent-service, and variant-mcp-server via Next.js rewrites.
+Browser-based internal tool — pipeline management, agent query, and cohort dashboard. Proxies requests to workflow-service, agent-service, and variant-mcp-server via Next.js App Router API routes (reads env vars at request time).
 
 **Requires:** infra deployed (including `poe up` with the new `vap-ui-sa` service account), all upstream services deployed, VPN connected.
 
