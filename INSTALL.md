@@ -1,6 +1,6 @@
 # Installation
 
-Deploy in order: **infra → variant-pipeline → clinvar-pipeline → workflow-service → variant-mcp-server → agent-service → vap-ui**. Each repo depends on the one before it.
+Deploy in order: **infra → variant-pipeline → clinvar-pipeline → workflow-service → variant-mcp-server → agent-service → sample-service → vap-ui**. Each repo depends on the one before it.
 
 ---
 
@@ -341,7 +341,43 @@ The response is an SSE stream. Events: `tool_call`, `tool_result`, `answer`, `er
 
 ---
 
-## 7. vap-ui
+## 7. sample-service
+
+RESTful API for 1000 Genomes sample metadata. Reads from the Firestore `samples` collection populated by `infra`'s `poe load-samples`.
+
+**Requires:** infra deployed (including `poe up` with `sample-service-sa`), `poe load-samples` run, VPN connected.
+
+### Install and deploy
+
+```bash
+cd sample-service
+cp .env.example .env
+# Edit .env: set GCP_PROJECT and PULUMI_CONFIG_PASSPHRASE_FILE
+
+poetry install
+
+# First time only:
+poetry run poe login
+poetry run poe stack-init
+
+# Build Docker image and deploy:
+poetry run poe build
+poetry run poe deploy
+```
+
+### Run locally
+
+```bash
+poetry run uvicorn src.main:app --reload --port 8080
+```
+
+Requires Application Default Credentials (`gcloud auth application-default login`).
+
+Health check: `curl http://localhost:8080/health`
+
+---
+
+## 8. vap-ui
 
 Browser-based internal tool — pipeline management, agent query, and cohort dashboard. Proxies requests to workflow-service, agent-service, and variant-mcp-server via Next.js App Router API routes (reads env vars at request time).
 
