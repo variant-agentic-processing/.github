@@ -145,6 +145,14 @@ Python · FastAPI · Next.js · ClickHouse · Anthropic Claude · Model Context 
 
 ---
 
+## Privacy & Data Disclaimer
+
+All individual names displayed in this platform (e.g. "Cole Campbell", "HG00096") are **auto-generated placeholder names** assigned to sample IDs for display purposes only. They are not the names of real people and do not correspond to any identifiable individual.
+
+All underlying data is sourced exclusively from public research datasets (1000 Genomes Project, ClinVar). No protected health information (PHI), patient records, or clinical data of any kind is used at any stage. This platform is a research and engineering prototype and is not a covered entity under HIPAA. Any resemblance between auto-generated display names and real individuals is entirely coincidental and unintentional.
+
+---
+
 ## License
 
 [CC BY-NC 4.0](../LICENSE) — © 2025 Ryan Ratcliff. Free for non-commercial use with attribution. Commercial use requires prior written consent.
