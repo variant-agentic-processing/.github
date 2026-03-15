@@ -2,13 +2,29 @@
 
 A cloud-native genomic variant analysis platform with an agentic natural language query interface. Built on GCP, ClickHouse, and the Model Context Protocol (MCP).
 
+Clinicians and researchers can ask plain-language questions about variant data — *"What pathogenic variants does this individual carry?"* or *"Which genes carry the highest pathogenic burden across the cohort?"* — and receive accurate, cited answers without writing queries. The platform ingests whole-genome sequencing VCFs, joins them with ClinVar clinical annotations, and stores them in a columnar analytical database optimised for genomic query patterns.
+
+All services run on GCP inside a private VPC. The only entry point is a WireGuard VPN gateway.
+
 ---
 
-## What This Is
+## Screenshots
 
-This platform ingests whole-genome sequencing VCF files, joins them with ClinVar clinical annotations, stores them in a columnar analytical database optimised for genomic query patterns, and exposes them to an AI agent through a structured MCP server. The result is a system where clinicians and researchers can ask natural language questions about variant data and receive accurate, cited answers without writing queries.
+**Cohort Dashboard** — live stats across all ingested individuals: 115.6M variants, 22 individuals, 130 pathogenic/likely pathogenic calls, and top genes by pathogenic burden.
 
-All services run on GCP, all traffic stays inside a private VPC, and the only entry point is a WireGuard VPN gateway.
+![Dashboard](screenshots/dashboard.png)
+
+**Sample Browser** — search and filter 2,504 individuals from the 1000 Genomes Project by ancestry, population, sex, and ingestion status.
+
+![Sample Browser](screenshots/individuals.png)
+
+**Individual Detail + Varis Agent** — per-individual variant table with clinical significance colour-coding, alongside the Varis AI agent panel for natural language queries about that individual.
+
+![Individual Detail with Agent](screenshots/agent.png)
+
+**System Status** — live health checks across all backend services, ClinVar currency, and pipeline readiness.
+
+![System Status](screenshots/pipelines.png)
 
 ---
 
@@ -30,7 +46,7 @@ All services run on GCP, all traffic stays inside a private VPC, and the only en
   │  ┌──────▼──────┐   ┌────▼─────────────────▼────────────────────┐  │
   │  │ MCP Service │   │              Firestore                    │◄┐ │
   │  │ (Cloud Run) │   │  pipeline state · samples · dash cache    │ │ │
-  │  │   6 tools   │   └───────────────────────────────────────────┘ │ │
+  │  │  22 tools   │   └───────────────────────────────────────────┘ │ │
   │  └──────┬──────┘                                                  │ │
   │         │ TCP 9000          ┌──────────────────────────────────┐  │ │
   │  ┌──────▼────────────────┐  │       Stats Service              ├──┘ │
@@ -45,30 +61,48 @@ All services run on GCP, all traffic stays inside a private VPC, and the only en
   └────────────────────────────────────────────────────────────────────┘
 ```
 
-**Six Cloud Run services (all `ingress: internal`):**
+**Seven Cloud Run services (all `ingress: internal`):**
 
 | Service | Purpose |
 |---------|---------|
-| **Web UI** | Unified pipeline management, agent chat, cohort dashboard, and sample browser (Next.js) |
-| **Agent API** | Natural language genomic queries — Claude reasoning loop, returns cited answers |
-| **Pipeline API** | Trigger and monitor VCF ingest and ClinVar refresh pipelines |
-| **MCP Service** | Six genomic query tools over Streamable HTTP — the agent's data interface |
-| **Sample Service** | 1000 Genomes sample metadata API — search, filter, and browse 2,504 individuals |
+| **Web UI** | Pipeline management, agent chat, cohort dashboard, and sample browser (Next.js) |
+| **Agent API** | Natural language genomic queries — Claude reasoning loop, SSE streaming answers |
+| **Pipeline API** | Submit and monitor VCF ingest and ClinVar refresh runs, Firestore state tracking |
+| **MCP Service** | 22 structured genomic query tools over Streamable HTTP — the agent's data interface |
+| **Sample Service** | 1000 Genomes sample metadata API — fuzzy search, filter by ancestry/population/sex |
 | **Stats Service** | Pre-computes cohort dashboard aggregates from ClickHouse into Firestore for instant load |
 
 ---
 
+## What the Agent Can Do
+
+The Varis agent (powered by Claude) reasons across 22 MCP tools to answer questions like:
+
+- *"What pathogenic variants does HG00096 carry?"*
+- *"Which genes carry the highest pathogenic burden across the cohort?"*
+- *"How many individuals carry a variant in MUTYH?"*
+- *"What is the clinical significance of this locus?"*
+- *"Compare the variant load between CEU and YRI populations."*
+
+The agent performs multi-hop reasoning — querying by individual, by gene, by locus, and across the cohort — and cites every data point back to ClinVar.
+
+---
+
 ## Repositories
+
+> **All source repositories are currently private** pending completion of a security review.
+> To request read access, open an issue on this repository or contact [@ryanratcliff](https://github.com/ryanratcliff) directly.
 
 | Repo | Description |
 |------|-------------|
 | `infra` | Pulumi (Python) — VPC, ClickHouse VM, WireGuard gateway, IAM, secrets, buckets, Artifact Registry, Firestore |
 | `variant-pipeline` | Cloud Workflow: download VCF → normalize (Cloud Batch / bcftools) → load to ClickHouse |
 | `clinvar-pipeline` | Cloud Workflow: ClinVar monthly refresh → version check → enrich (Cloud Batch) → upsert annotations |
-| `variant-mcp-server` | Cloud Run MCP service — six structured genomic query tools over Streamable HTTP |
+| `variant-mcp-server` | Cloud Run MCP service — 22 structured genomic query tools over Streamable HTTP |
 | `agent-service` | Cloud Run FastAPI — Claude reasoning loop over MCP tools, SSE answer stream |
 | `workflow-service` | Cloud Run FastAPI — submit and monitor pipeline runs, Firestore state tracking |
 | `sample-service` | Cloud Run FastAPI — 1000 Genomes sample metadata with fuzzy search |
+| `stats-service` | Cloud Run FastAPI — cohort-level aggregations cached to Firestore |
 | `vap-ui` | Cloud Run Next.js — pipeline management, agent query, cohort dashboard, sample browser |
 
 ---
@@ -77,11 +111,13 @@ All services run on GCP, all traffic stays inside a private VPC, and the only en
 
 **ClickHouse for analytical genomics** — the variant workload is columnar by nature: per-individual scans of millions of rows, range queries, and cohort aggregations. ClickHouse's MergeTree sort key and vectorised execution are a natural fit. Separate `variants` and `annotations` tables allow ClinVar to be refreshed monthly without touching variant call data.
 
-**MCP as the agent's data interface** — the MCP service exposes six structured tools that the agent uses through multi-hop reasoning. Names, descriptions, and schemas are independent of ClickHouse internals, so the storage layer can evolve without touching the agent.
+**MCP as the agent's data interface** — the MCP service exposes structured tools that the agent uses through multi-hop reasoning. Tool names, descriptions, and schemas are independent of ClickHouse internals, so the storage layer can evolve without touching the agent.
 
 **Private-by-default networking** — no public Cloud Run endpoints, no external IPs. All services run with `ingress: internal` inside a private VPC. WireGuard is the single ingress point, keeping the attack surface minimal.
 
 **Infrastructure as Python with Pulumi** — every service in this platform is written in Python, and the infrastructure is no different. Pulumi gives real loops, functions, type hints, and pytest for infra tests with no DSL context-switching.
+
+**Deploy-on-merge CI** — all nine repositories use GitHub Actions with Workload Identity Federation (keyless auth) for zero-credential deployments. Merging to main deploys automatically.
 
 ---
 
@@ -99,19 +135,13 @@ All prototype data is public. No patient data is used at any stage.
 
 ## GCP Services
 
-Cloud Run . Compute Engine (ClickHouse, n2-highmem-8) . Cloud Batch . Cloud Workflows . Cloud Scheduler . Cloud Storage . Firestore . Artifact Registry . Secret Manager . VPN Gateway (WireGuard)
+Cloud Run · Compute Engine (ClickHouse, n2-highmem-8) · Cloud Batch · Cloud Workflows · Cloud Scheduler · Cloud Storage · Firestore · Artifact Registry · Secret Manager · VPN Gateway (WireGuard)
 
 ---
 
 ## Tech Stack
 
-Python . FastAPI . Next.js . ClickHouse . Anthropic Claude . Model Context Protocol . Pulumi . bcftools . WireGuard
-
----
-
-## Getting Started
-
-Step-by-step deployment instructions across all repos: [INSTALL.md](../INSTALL.md)
+Python · FastAPI · Next.js · ClickHouse · Anthropic Claude · Model Context Protocol · Pulumi · bcftools · WireGuard
 
 ---
 
